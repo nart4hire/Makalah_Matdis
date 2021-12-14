@@ -3,7 +3,9 @@ from time import time
 from PIL import Image
 from sys import argv
 
-### Main Functions
+# Main Functions
+
+
 def FISR(input: float, accurate: bool = False) -> float:
     """ Converts an input float to the inverse square root using the Fast Inverse Square Root algorithm
     """
@@ -17,9 +19,11 @@ def FISR(input: float, accurate: bool = False) -> float:
     half = input * 0.5
     approx_float = approx_float * (1.5 - (half * approx_float * approx_float))
     if accurate:
-        approx_float = approx_float * (1.5 - (half * approx_float * approx_float))
+        approx_float = approx_float * \
+            (1.5 - (half * approx_float * approx_float))
 
     return float(approx_float)
+
 
 def ISR(input: float, inverse: bool = False) -> float:
     """ Converts an input float to the inverse square root using Integer Square Root Algorithm
@@ -30,18 +34,24 @@ def ISR(input: float, inverse: bool = False) -> float:
     approx_float = (((((0x7f800000 & cast_int) >> 23) - 127) // 2) + 127) << 23
 
     # Approximate other integers using integer square root
-    for i in range(22, -1, -1):                         # For i in range of digits in mantissa - 1 to 0
-        increment = 1 << i                              # Increment is 1 at the position i + 1
-        est = (approx_float + increment).view(float32)  # set est = approximation + increment in float form
-        if (est * est <= src_float):                    # If the original input is more than est ^ 2:
-            approx_float += increment                   #     > add increment to approximation
-    
+    # For i in range of digits in mantissa - 1 to 0
+    for i in range(22, -1, -1):
+        # Increment is 1 at the position i + 1
+        increment = 1 << i
+        # set est = approximation + increment in float form
+        est = (approx_float + increment).view(float32)
+        # If the original input is more than est ^ 2:
+        if (est * est <= src_float):
+            approx_float += increment  # > add increment to approximation
+
     if inverse:
         return 1 / float(approx_float.view(float32))
     return float(approx_float.view(float32))
-### End Main Functions
+# End Main Functions
 
-### Vector Class
+# Vector Class
+
+
 class Vector:
     def __init__(self, x: float, y: float, z: float):
         self.abscissa = float(x)
@@ -56,7 +66,8 @@ class Vector:
         return copy
 
     def normalize(self, default: bool = True):
-        sum_of_squares = self.abscissa * self.abscissa + self.ordinate * self.ordinate + self.applicate * self.applicate
+        sum_of_squares = self.abscissa * self.abscissa + self.ordinate * \
+            self.ordinate + self.applicate * self.applicate
         if default:
             norm = FISR(sum_of_squares)
         else:
@@ -81,25 +92,31 @@ class Vector:
         return copy
 
     def length(self) -> float:
-        sum_of_squares = self.abscissa * self.abscissa + self.ordinate * self.ordinate + self.applicate * self.applicate
+        sum_of_squares = self.abscissa * self.abscissa + self.ordinate * \
+            self.ordinate + self.applicate * self.applicate
         return (1 / FISR(sum_of_squares))
 
     def dot(self, v):
         return self.abscissa * v.abscissa + self.ordinate * v.ordinate + self.applicate * v.applicate
-### End Vector Class
+# End Vector Class
 
-### Plane Class
+# Plane Class
+
+
 class Paraboloid:
-    def __init__(self, size: int = 100, light_direction: Vector = Vector(-1, -1, 3), mx: float = 0.15, my: float = 0.15, dx: float = 7.5, dy: float = 7.5, dz: float = 30, default: bool = True):
+    def __init__(self, size: int = 100, light_direction: Vector = Vector(-1, -1, 3), mx: float = 0.025,
+    my: float = 0.025, dx: float = 12.5, dy: float = 12.5, dz: float = 250, default: bool = True):
         self.shape = size
         self.dir = light_direction.normalize(default)
-        self.heights = [[dz - (mx * x - dx) ** 2 - (my * y - dy) ** 2 for y in range(size + 2)] for x in range(size + 2)]
+        self.heights = [[dz - (mx * x - dx) ** 2 - (my * y - dy)
+                         ** 2 for y in range(size + 2)] for x in range(size + 2)]
         print("height map initialized...")
-        if not default:
-            self.norms = [[Vector(self.heights[x - 1][y] - self.heights[x + 1][y], self.heights[x][y - 1] - self.heights[x][y + 1], 2).normalize(default) for y in range(1, size + 1)] for x in range(1, size + 1)]
-        else:
-            self.norms = [[Vector(self.heights[x - 1][y] - self.heights[x + 1][y], self.heights[x][y - 1] - self.heights[x][y + 1], 2).normalize(default) for y in range(1, size + 1)] for x in range(1, size + 1)]
+        self.norms = [[Vector(self.heights[x - 1][y] - self.heights[x + 1][y], self.heights[x][y - 1] -
+                              self.heights[x][y + 1], 2).normalize(default) for y in range(1, size + 1)] for x in range(1, size + 1)]
         print("norm map initialized...\n")
+
+    def changelight(self, light_direction: Vector = Vector(-1, -1, 3), default: bool = True):
+        self.dir = light_direction.normalize(default)
 
     def shade_map(self, num: str = '', specular: bool = True) -> Image:
         if specular:
@@ -110,12 +127,14 @@ class Paraboloid:
             Ka = 0.05
             Kd = 0.6
             Ks = 0
-        
+
         img = Image.new('RGB', (self.shape, self.shape))
         for i in range(self.shape):
             for j in range(self.shape):
                 norm = self.norms[i][j]
-                ratio = Ka + Kd * norm.dot(self.dir) + Ks * (norm.dot(self.dir.add_vector(Vector(0, 0, 0.5))))
+                ratio = Ka + Kd * \
+                    norm.dot(self.dir) + Ks * \
+                    (norm.dot(self.dir.add_vector(Vector(0, 0, 0.5))))
                 if ratio > 1:
                     intensity = 255
                 else:
@@ -125,6 +144,7 @@ class Paraboloid:
             img.save('test' + num + '.jpg')
         else:
             return img
+
 
 if __name__ == "__main__":
     hl = 3
@@ -148,86 +168,92 @@ if __name__ == "__main__":
         gif = 'n'
     else:
         gif = str(argv[4])
-    
+
     if len(argv) == 1:
         start = time()
         p = Paraboloid()
         p.shade_map('basic')
         end = time()
-        print ('image saved')
-        print ('took', end - start, 'seconds')
+        print('image saved')
+        print('took', end - start, 'seconds')
         exit(0)
-    
+
     if isr in 'y':
         if gif in 'y':
             start = time()
             images = []
+            p = Paraboloid(size, default=False)
             for i in range(-about, about):
                 j = sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl), default=False)
+                p.changelight(Vector(i, j, hl), default=False)
                 images.append(p.shade_map())
-            
+
             for i in range(about, -about, -1):
                 j = -sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl), default=False)
+                p.changelight(Vector(i, j, hl), default=False)
                 images.append(p.shade_map())
-            
-            images[0].save('test.gif', save_all=True, append_images=images[1:], duration=60, loop=0)
+
+            images[0].save('test.gif', save_all=True,
+                           append_images=images[1:], duration=60, loop=0)
             end = time()
-            print ('gif saved')
-            print ('took', end - start, 'seconds')
+            print('gif saved')
+            print('took', end - start, 'seconds')
         else:
             start = time()
             qn = 1
+            p = Paraboloid(size, default=False)
             for i in range(-about, about):
+                print('image ' + str(qn) + ' initializing...')
                 j = sqrt(about ** 2 - i ** 2)
-                print ('image ' + str(qn) + ' initializing...')
-                p = Paraboloid(size, Vector(i, j, hl), default=False)
+                p.changelight(Vector(i, j, hl), default=False)
                 p.shade_map(str(qn))
                 qn += 1
-            
+
             for i in range(about, -about, -1):
+                print('image ' + str(qn) + ' initializing...')
                 j = -sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl), default=False)
+                p.changelight(Vector(i, j, hl), default=False)
                 p.shade_map(str(qn))
                 qn += 1
             end = time()
-            print ('image(s) saved')
-            print ('took', end - start, 'seconds')
+            print('image(s) saved')
+            print('took', end - start, 'seconds')
     else:
         if gif in 'y':
             start = time()
+            p = Paraboloid(size)
             images = []
             for i in range(-about, about):
                 j = sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl))
+                p.changelight(Vector(i, j, hl))
                 images.append(p.shade_map())
-            
+
             for i in range(about, -about, -1):
                 j = -sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl))
+                p.changelight(Vector(i, j, hl))
                 images.append(p.shade_map())
-            
-            images[0].save('test.gif', save_all=True, append_images=images[1:], duration=60, loop=0)
+
+            images[0].save('test.gif', save_all=True,
+                           append_images=images[1:], duration=60, loop=0)
             end = time()
-            print ('gif saved')
-            print ('took', end - start, 'seconds')
+            print('gif saved')
+            print('took', end - start, 'seconds')
         else:
             start = time()
+            p = Paraboloid(size)
             qn = 1
             for i in range(-about, about):
                 j = sqrt(about ** 2 - i ** 2)
-                print ('image ' + str(qn) + ' initializing...')
-                p = Paraboloid(size, Vector(i, j, hl))
+                print('image ' + str(qn) + ' initializing...')
+                p.changelight(Vector(i, j, hl))
                 p.shade_map(str(qn))
                 qn += 1
-            
+
             for i in range(about, -about, -1):
                 j = -sqrt(about ** 2 - i ** 2)
-                p = Paraboloid(size, Vector(i, j, hl))
+                p.changelight(Vector(i, j, hl))
                 p.shade_map(str(qn))
                 qn += 1
             end = time()
-            print ('image(s) saved')
-            print ('took', end - start, 'seconds')
-            
+            print('image(s) saved')
+            print('took', end - start, 'seconds')
